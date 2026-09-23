@@ -1,0 +1,6 @@
+{
+  "name": "BhashaBill - AI Bill & Receipt Translation Bot",
+  "description": "Smart AI translation bot that converts English receipts, grocery bills, and invoices into regional Indian and global languages with itemized breakdowns, audio pronunciation, and interactive assistant.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

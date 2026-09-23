@@ -26,34 +26,66 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [isBotOpen, setIsBotOpen] = useState<boolean>(false);
   const [botExternalPrompt, setBotExternalPrompt] = useState<string | null>(null);
+  const [backendStatus, setBackendStatus] = useState<'connected' | 'checking'>('checking');
 
-  // Load history from localStorage
-  useEffect(() => {
+  // Load receipts from backend database on mount
+  const fetchBackendReceipts = async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setHistory(JSON.parse(saved));
+      const res = await fetch('/api/receipts');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.receipts && Array.isArray(data.receipts)) {
+          setHistory(data.receipts);
+          setBackendStatus('connected');
+          return;
+        }
       }
     } catch (e) {
-      console.warn('Could not load history from localStorage:', e);
+      console.warn('Backend receipts fetch error:', e);
     }
+    // Fallback to local storage if backend not yet ready
+    try {
+      const saved = localStorage.getItem('bhashabill_saved_receipts_v1');
+      if (saved) setHistory(JSON.parse(saved));
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchBackendReceipts();
   }, []);
 
-  // Save history to localStorage
-  const saveToHistory = (newReceipt: ReceiptData) => {
+  // Save history to backend and local storage
+  const saveToHistory = async (newReceipt: ReceiptData) => {
     try {
-      const updated = [newReceipt, ...history.filter((h) => h.timestamp !== newReceipt.timestamp)].slice(0, 20);
+      const updated = [newReceipt, ...history.filter((h) => h.timestamp !== newReceipt.timestamp)].slice(0, 50);
       setHistory(updated);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem('bhashabill_saved_receipts_v1', JSON.stringify(updated));
+
+      // Also persist to backend REST endpoint
+      await fetch('/api/receipts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newReceipt),
+      });
     } catch (e) {
-      console.warn('Could not save history to localStorage:', e);
+      console.warn('Could not save receipt to backend:', e);
     }
   };
 
-  const handleClearHistory = () => {
+  const handleDeleteReceipt = async (timestamp: number) => {
+    setHistory((prev) => prev.filter((r) => r.timestamp !== timestamp));
+    try {
+      await fetch(`/api/receipts/${timestamp}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn('Error deleting receipt from backend:', e);
+    }
+  };
+
+  const handleClearHistory = async () => {
     setHistory([]);
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('bhashabill_saved_receipts_v1');
+      await fetch('/api/receipts', { method: 'DELETE' });
     } catch (e) {
       console.warn(e);
     }
@@ -198,6 +230,7 @@ export default function App() {
           if (matchedLang) setSelectedLanguage(matchedLang);
         }}
         onClearHistory={handleClearHistory}
+        onDeleteReceipt={handleDeleteReceipt}
       />
     </div>
   );

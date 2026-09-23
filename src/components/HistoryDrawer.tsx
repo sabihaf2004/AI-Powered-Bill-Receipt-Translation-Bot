@@ -8,6 +8,7 @@ interface HistoryDrawerProps {
   history: ReceiptData[];
   onSelectReceipt: (receipt: ReceiptData) => void;
   onClearHistory: () => void;
+  onDeleteReceipt?: (timestamp: number) => void;
 }
 
 export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
@@ -16,6 +17,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
   history,
   onSelectReceipt,
   onClearHistory,
+  onDeleteReceipt,
 }) => {
   if (!isOpen) return null;
 
@@ -26,7 +28,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-amber-400" />
-            <h3 className="text-sm font-bold text-white">Translated Receipts History</h3>
+            <h3 className="text-sm font-bold text-white">Backend Saved Receipts</h3>
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
               {history.length}
             </span>
@@ -45,22 +47,24 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
           {history.length === 0 ? (
             <div className="text-center py-16 text-slate-500 text-xs">
               <Clock className="w-8 h-8 mx-auto mb-2 opacity-40 text-amber-400" />
-              <p>No translated receipts saved yet.</p>
+              <p>No translated receipts saved yet in backend database.</p>
               <p className="text-[11px] mt-1 text-slate-600">
-                Receipts you scan and translate will automatically appear here.
+                Receipts you scan and translate are automatically persisted to the backend server.
               </p>
             </div>
           ) : (
             history.map((item, idx) => (
               <div
                 key={idx}
-                onClick={() => {
-                  onSelectReceipt(item);
-                  onClose();
-                }}
-                className="group p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-amber-500/40 hover:bg-slate-800/40 cursor-pointer transition-all flex flex-col justify-between"
+                className="group p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-amber-500/40 hover:bg-slate-800/40 transition-all flex flex-col justify-between"
               >
-                <div>
+                <div 
+                  onClick={() => {
+                    onSelectReceipt(item);
+                    onClose();
+                  }}
+                  className="cursor-pointer"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-regional font-bold text-xs text-amber-300 group-hover:text-amber-400">
                       {item.merchant.translatedName}
@@ -79,10 +83,31 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                   <span>
                     {new Date(item.timestamp).toLocaleDateString()} • {item.items.length} items
                   </span>
-                  <span className="text-amber-400 font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                    <span>View Bill</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </span>
+                  
+                  <div className="flex items-center gap-2">
+                    {onDeleteReceipt && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteReceipt(item.timestamp);
+                        }}
+                        className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        title="Delete this receipt from backend"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        onSelectReceipt(item);
+                        onClose();
+                      }}
+                      className="text-amber-400 font-semibold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
+                    >
+                      <span>View Bill</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
